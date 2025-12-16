@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servicios Web Integrados - Login y Contador</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Estilos para el Login */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        .login-header {
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            color: #1a2980;
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            color: #666;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #1a2980;
+            font-weight: 600;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border 0.3s ease;
+        }
+
+        .form-input:focus {
+            border-color: #26d0ce;
+            outline: none;
+        }
+
+        .captcha-container {
+            background: #f0f7ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .captcha-question {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1a2980;
+            padding: 10px 20px;
+            background: white;
+            border-radius: 8px;
+            border: 2px dashed #26d0ce;
+        }
+
+        .captcha-input {
+            font-size: 1.2rem;
+            text-align: center;
+            max-width: 120px;
+        }
+
+        .btn-login {
+            background: linear-gradient(to right, #1a2980, #26d0ce);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-3px);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            background: #ffebee;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .visits-counter {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1a2980;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .visits-counter i {
+            color: #26d0ce;
+        }
+
+        /* Estilos para la página principal */
+        .main-content {
+            display: none;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            border-radius: 0 0 15px 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .services-intro {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(to right, #1a2980, #26d0ce);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-header i {
+            font-size: 2rem;
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        .map-container {
+            height: 400px;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .weather-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .weather-main {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            width: 100%;
+            justify-content: space-around;
+        }
+
+        .temperature {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #1a2980;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+        }
+
+        .weather-detail {
+            background: #f0f7ff;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .social-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .social-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .social-link:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+        }
+
+        .social-icon {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .facebook { color: #3b5998; }
+        .twitter { color: #1da1f2; }
+        .instagram { color: #e4405f; }
+        .linkedin { color: #0077b5; }
+        .youtube { color: #ff0000; }
+        .github { color: #333; }
+
+        .tech-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .tech-section h2 {
+            color: #1a2980;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 2rem;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .tech-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #26d0ce;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 25px;
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            color: white;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .location-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #1a2980;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #26d0ce;
+        }
+
+        .input-field {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            flex-grow: 1;
+        }
+
+        .user-location {
+            background: #f0f7ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-location i {
+            color: #1a2980;
+            font-size: 1.2rem;
+        }
+
+        .location-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .address {
+            font-weight: 600;
+            color: #1a2980;
+        }
+
+        .coordinates {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .accuracy-info {
+            display: inline-block;
+            background: #e3f2fd;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .weather-main {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .location-controls {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .login-container {
+                padding: 30px 20px;
+                margin: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sistema de Login -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-container">
+            <div class="login-header">
+                <h1><i class="fas fa-lock"></i> Acceso Seguro</h1>
+                <p>Ingresa tus credenciales para acceder a los servicios web integrados</p>
+                <div id="visitsCounterLogin" style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                    <i class="fas fa-users"></i> Visitas totales: <span id="visitsCountLogin">0</span>
+                </div>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="username"><i class="fas fa-user"></i> Usuario</label>
+                    <input type="text" id="username" class="form-input" placeholder="Ingresa tu usuario" required>
+                    <small style="color: #666; font-size: 0.85rem;">Usuario por defecto: admin</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password"><i class="fas fa-key"></i> Contraseña</label>
+                    <input type="password" id="password" class="form-input" placeholder="Ingresa tu contraseña" required>
+                    <small style="color: #666; font-size: 0.85rem;">Contraseña por defecto: 1234</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="accessCode"><i class="fas fa-shield-alt"></i> Código de Acceso</label>
+                    <input type="text" id="accessCode" class="form-input" placeholder="Ingresa el código: WEB2024" required>
+                    <small style="color: #666; font-size: 0.85rem;">Código: WEB2024</small>
+                </div>
+                
+                <div class="captcha-container">
+                    <label><i class="fas fa-robot"></i> Verificación de Seguridad</label>
+                    <div class="captcha-question" id="captchaQuestion"></div>
+                    <input type="number" id="captchaAnswer" class="form-input captcha-input" placeholder="Respuesta" required>
+                    <button type="button" id="refreshCaptcha" class="btn" style="background: #26d0ce;">
+                        <i class="fas fa-redo"></i> Nuevo Captcha
+                    </button>
+                </div>
+                
+                <button type="submit" class="btn-login">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                </button>
+                
+                <div id="loginErrorMessage" class="error-message">
+                    <i class="fas fa-exclamation-circle"></i> <span id="errorText">Credenciales incorrectas</span>
+                </div>
+            </form>
+            
+            <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee;">
+                <p style="color: #666; font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> Credenciales de prueba:<br>
+                    Usuario: <strong>admin</strong> | Contraseña: <strong>1234</strong><br>
+                    Código: <strong>WEB2024</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contador de visitas flotante -->
+    <div class="visits-counter" id="visitsCounter">
+        <i class="fas fa-eye"></i>
+        <span id="visitsCount">0</span> visitas
+    </div>
+
+    <!-- Contenido principal (oculto inicialmente) -->
+    <div class="main-content" id="mainContent">
+        <header>
+            <div class="container">
+                <button class="logout-btn" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+                <h1><i class="fas fa-globe-americas"></i> Servicios Web Integrados</h1>
+                <p class="subtitle">Bienvenido, <span id="loggedUser">Usuario</span> | Plataforma con ubicación exacta en tiempo real y clima correspondiente</p>
+            </div>
+        </header>
+
+        <div class="container">
+            <section class="services-intro">
+                <h2>Servicios Web en Tiempo Real</h2>
+                <p>Esta plataforma utiliza la geolocalización del navegador para obtener tu ubicación exacta y mostrar el clima correspondiente a esa ubicación. Todos los datos son en tiempo real.</p>
+                <div id="locationPermissionStatus" class="loading">
+                    <i class="fas fa-spinner fa-spin"></i> Esperando permiso de ubicación...
+                </div>
+            </section>
+
+            <div class="services-grid">
+                <!-- Servicio de Ubicación Satelital y Cartografía -->
+                <div class="service-card">
+                    <div class="card-header">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <h2>Tu Ubicación Exacta</h2>
+                    </div>
+                    <div class="card-content">
+                        <div id="userLocationInfo" class="user-location">
+                            <i class="fas fa-location-dot"></i>
+                            <div class="location-details">
+                                <span class="address">Obteniendo tu ubicación...</span>
+                                <span class="coordinates">Coordenadas: ---, ---</span>
+                            </div>
+                        </div>
+                        
+                        <p>Mapa interactivo que muestra tu ubicación exacta con alta precisión usando el GPS de tu dispositivo.</p>
+                        
+                        <div class="location-controls">
+                            <input type="text" id="locationInput" class="input-field" placeholder="Buscar otra ubicación (ej: Madrid, España)">
+                            <button id="searchLocation" class="btn">Buscar</button>
+                        </div>
+                        
+                        <div class="location-controls">
+                            <button id="getCurrentLocation" class="btn"><i class="fas fa-location-arrow"></i> Mi Ubicación Actual</button>
+                            <button id="trackLocation" class="btn"><i class="fas fa-satellite"></i> Seguir Ubicación</button>
+                        </div>
+                        
+                        <div id="map" class="map-container"></div>
+                        <p id="coordinates" style="margin-top: 10px; font-size: 0.9rem; text-align: center;">
+                            Coordenadas exactas: Lat: <span id="lat">0</span>, Lon: <span id="lon">0</span>
+                            <span id="accuracyInfo" class="accuracy-info">Precisión: -- metros</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Servicio del Estado del Clima -->
+                <div class="service-card">
+                    <div class="card-header">
+                        <i class="fas fa-cloud-sun"></i>
+                        <h2>Clima en Tu Ubicación</h2>
+                    </div>
+                    <div class="card-content">
+                        <p>Información meteorológica en tiempo real correspondiente a tu ubicación exacta.</p>
+                        
+                        <div id="weatherData" class="weather-info">
+                            <div class="weather-main">
+                                <div>
+                                    <h3 id="cityName">Tu ubicación actual</h3>
+                                    <p id="weatherDescription">Obteniendo datos del clima...</p>
+                                </div>
+                                <div class="temperature">
+                                    <span id="temperature">--</span>°C
+                                </div>
+                                <div>
+                                    <img id="weatherIcon" src="" alt="Icono del clima" style="width: 80px; height: 80px; display: none;">
+                                    <div id="weatherIconPlaceholder" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-spinner fa-spin fa-2x" style="color: #1a2980;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="weather-details">
+                                <div class="weather-detail">
+                                    <p><i class="fas fa-temperature-high"></i> Sensación Térmica</p>
+                                    <h4 id="feelsLike">--°C</h4>
+                                </div>
+                                <div class="weather-detail">
+                                    <p><i class="fas fa-tint"></i> Humedad</p>
+                                    <h4 id="humidity">--%</h4>
+                                </div>
+                                <div class="weather-detail">
+                                    <p><i class="fas fa-wind"></i> Viento</p>
+                                    <h4 id="windSpeed">-- km/h</h4>
+                                </div>
+                                <div class="weather-detail">
+                                    <p><i class="fas fa-compress-alt"></i> Presión</p>
+                                    <h4 id="pressure">-- hPa</h4>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="weatherTimeInfo" style="text-align: center; margin-top: 15px; font-size: 0.9rem; color: #666;">
+                            <i class="far fa-clock"></i> Actualizado: <span id="lastUpdate">--:--</span>
+                        </div>
+                        
+                        <div style="margin-top: 20px; text-align: center;">
+                            <button id="refreshWeather" class="btn"><i class="fas fa-sync-alt"></i> Actualizar Clima</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Servicio de Redes Sociales -->
+                <div class="service-card">
+                    <div class="card-header">
+                        <i class="fas fa-share-alt"></i>
+                        <h2>Compartir Ubicación y Clima</h2>
+                    </div>
+                    <div class="card-content">
+                        <p>Comparte tu ubicación exacta y las condiciones climáticas actuales en tus redes sociales.</p>
+                        
+                        <div class="social-links">
+                            <a href="https://facebook.com" target="_blank" class="social-link">
+                                <i class="fab fa-facebook social-icon facebook"></i>
+                                <span>Facebook</span>
+                            </a>
+                            <a href="https://twitter.com" target="_blank" class="social-link">
+                                <i class="fab fa-twitter social-icon twitter"></i>
+                                <span>Twitter</span>
+                            </a>
+                            <a href="https://instagram.com" target="_blank" class="social-link">
+                                <i class="fab fa-instagram social-icon instagram"></i>
+                                <span>Instagram</span>
+                            </a>
+                            <a href="https://linkedin.com" target="_blank" class="social-link">
+                                <i class="fab fa-linkedin social-icon linkedin"></i>
+                                <span>LinkedIn</span>
+                            </a>
+                        </div>
+                        
+                        <div style="margin-top: 25px; padding: 15px; background-color: #f0f7ff; border-radius: 10px;">
+                            <h3 style="margin-bottom: 10px; color: #1a2980;">Compartir ubicación y clima actual</h3>
+                            <p>Comparte tu ubicación exacta y las condiciones climáticas actuales:</p>
+                            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <button id="shareLocationTwitter" class="btn" style="background-color: #1da1f2; flex: 1;">
+                                        <i class="fab fa-twitter"></i> Compartir en Twitter
+                                    </button>
+                                    <button id="shareLocationFacebook" class="btn" style="background-color: #3b5998; flex: 1;">
+                                        <i class="fab fa-facebook-f"></i> Compartir en Facebook
+                                    </button>
+                                </div>
+                                <button id="copyLocation" class="btn" style="background-color: #26d0ce;">
+                                    <i class="fas fa-copy"></i> Copiar Información
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="shareMessage" style="display: none; margin-top: 15px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Tecnologías Utilizadas -->
+            <section class="tech-section">
+                <h2><i class="fas fa-code"></i> Sistema de Autenticación y Estadísticas</h2>
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <h3><i class="fas fa-user-shield"></i> Sistema de Login</h3>
+                        <p>Autenticación de 3 factores implementada:</p>
+                        <ul style="padding-left: 20px; margin-top: 10px;">
+                            <li><strong>Usuario y Contraseña</strong>: Credenciales por defecto</li>
+                            <li><strong>Código de Acceso</strong>: Verificación adicional (WEB2024)</li>
+                            <li><strong>Captcha Matemático</strong>: Operación aleatoria simple</li>
+                            <li><strong>Sesión Persistente</strong>: Usa localStorage del navegador</li>
+                        </ul>
+                    </div>
+                    <div class="tech-card">
+                        <h3><i class="fas fa-chart-line"></i> Contador de Visitas</h3>
+                        <p>Sistema que cuenta cada acceso único a la aplicación:</p>
+                        <ul style="padding-left: 20px; margin-top: 10px;">
+                            <li><strong>Almacenamiento Local</strong>: Usa localStorage para persistencia</li>
+                            <li><strong>Contador Global</strong>: Incrementa con cada carga de página</li>
+                            <li><strong>Visualización en Tiempo Real</strong>: Mostrado durante login y sesión</li>
+                            <li><strong>Persistencia entre Sesiones</strong>: Los datos no se pierden al cerrar</li>
+                        </ul>
+                    </div>
+                    <div class="tech-card">
+                        <h3><i class="fas fa-database"></i> Almacenamiento de Datos</h3>
+                        <p>Tecnologías utilizadas para guardar información:</p>
+                        <ul style="padding-left: 20px; margin-top: 10px;">
+                            <li><strong>localStorage</strong>: Para sesión y contador de visitas</li>
+                            <li><strong>Cookies</strong>: Alternativa para sesiones prolongadas</li>
+                            <li><strong>Session Storage</strong>: Datos temporales de la sesión</li>
+                            <li><strong>Sin Backend</strong>: Todo funciona en el cliente</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <footer>
+            <div class="container">
+                <p>Proyecto de Integración de Servicios Web - Ingeniería en Sistemas Computacionales</p>
+                <p>Geolocalización exacta y clima en tiempo real | Sistema de login con autenticación de 3 factores</p>
+                <p style="margin-top: 15px; opacity: 0.8;">© 2024 - Todos los derechos reservados | Visitas totales: <span id="visitsCountFooter">0</span></p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // ==================== SISTEMA DE LOGIN ====================
+        
+        // Credenciales por defecto
+        const DEFAULT_CREDENTIALS = {
+            username: 'admin',
+            password: '1234',
+            accessCode: 'WEB2024'
+        };
+        
+        // Variables para el captcha
+        let captchaAnswer = 0;
+        
+        // Variables para el contador de visitas
+        let totalVisits = 0;
+        
+        // Variables de la aplicación principal
+        let map;
+        let userMarker;
+        let watchId = null;
+        let currentLocation = null;
+        let lastWeatherUpdate = null;
+        const OPENWEATHER_API_KEY = null; // Usará simulación
+        
+        // Inicializar la aplicación cuando la página cargue
+        document.addEventListener('DOMContentLoaded', function() {
+            initLoginSystem();
+            updateVisitsCounter();
+            generateCaptcha();
+        });
+        
+        // ==================== FUNCIONES DE LOGIN ====================
+        
+        function initLoginSystem() {
+            // Verificar si ya está logueado
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const loggedUser = localStorage.getItem('loggedUser');
+            
+            if (isLoggedIn && loggedUser) {
+                showMainContent(loggedUser);
+            } else {
+                showLoginForm();
+            }
+            
+            // Configurar eventos del formulario de login
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('refreshCaptcha').addEventListener('click', generateCaptcha);
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+        }
+        
+        function showLoginForm() {
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('mainContent').style.display = 'none';
+        }
+        
+        function showMainContent(username) {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('loggedUser').textContent = username;
+            
+            // Inicializar la aplicación principal
+            initMap();
+            setupEventListeners();
+            requestLocationPermission();
+        }
+        
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const accessCode = document.getElementById('accessCode').value;
+            const captchaInput = parseInt(document.getElementById('captchaAnswer').value);
+            
+            // Validar credenciales
+            const isValid = 
+                username === DEFAULT_CREDENTIALS.username &&
+                password === DEFAULT_CREDENTIALS.password &&
+                accessCode === DEFAULT_CREDENTIALS.accessCode &&
+                captchaInput === captchaAnswer;
+            
+            const errorElement = document.getElementById('loginErrorMessage');
+            const errorText = document.getElementById('errorText');
+            
+            if (isValid) {
+                // Login exitoso
+                errorElement.style.display = 'none';
+                
+                // Guardar estado de sesión
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('loggedUser', username);
+                
+                // Mostrar contenido principal
+                showMainContent(username);
+            } else {
+                // Mostrar error específico
+                let errorMessage = 'Error en la autenticación. ';
+                
+                if (username !== DEFAULT_CREDENTIALS.username || 
+                    password !== DEFAULT_CREDENTIALS.password) {
+                    errorMessage += 'Usuario o contraseña incorrectos. ';
+                }
+                
+                if (accessCode !== DEFAULT_CREDENTIALS.accessCode) {
+                    errorMessage += 'Código de acceso inválido. ';
+                }
+                
+                if (captchaInput !== captchaAnswer) {
+                    errorMessage += 'Captcha incorrecto. ';
+                }
+                
+                errorText.textContent = errorMessage;
+                errorElement.style.display = 'block';
+                
+                // Generar nuevo captcha
+                generateCaptcha();
+            }
+        }
+        
+        function handleLogout() {
+            // Limpiar sesión
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('loggedUser');
+            
+            // Detener seguimiento de ubicación si está activo
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            
+            // Regresar al login
+            showLoginForm();
+            
+            // Limpiar formulario
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('accessCode').value = '';
+            document.getElementById('captchaAnswer').value = '';
+            generateCaptcha();
+        }
+        
+        function generateCaptcha() {
+            // Generar operación matemática simple
+            const num1 = Math.floor(Math.random() * 10) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            const operators = ['+', '-', '*'];
+            const operator = operators[Math.floor(Math.random() * operators.length)];
+            
+            let question = '';
+            let answer = 0;
+            
+            switch(operator) {
+                case '+':
+                    question = `${num1} + ${num2}`;
+                    answer = num1 + num2;
+                    break;
+                case '-':
+                    question = `${num1} - ${num2}`;
+                    answer = num1 - num2;
+                    break;
+                case '*':
+                    question = `${num1} × ${num2}`;
+                    answer = num1 * num2;
+                    break;
+            }
+            
+            document.getElementById('captchaQuestion').textContent = question;
+            captchaAnswer = answer;
+            document.getElementById('captchaAnswer').value = '';
+        }
+        
+        // ==================== CONTADOR DE VISITAS ====================
+        
+        function updateVisitsCounter() {
+            // Obtener visitas actuales del localStorage
+            let visits = localStorage.getItem('totalVisits');
+            
+            if (visits) {
+                totalVisits = parseInt(visits);
+            } else {
+                totalVisits = 0;
+            }
+            
+            // Incrementar contador
+            totalVisits++;
+            
+            // Guardar en localStorage
+            localStorage.setItem('totalVisits', totalVisits.toString());
+            
+            // Actualizar en todas las ubicaciones
+            document.getElementById('visitsCount').textContent = totalVisits;
+            document.getElementById('visitsCountLogin').textContent = totalVisits;
+            document.getElementById('visitsCountFooter').textContent = totalVisits;
+        }
+        
+        // ==================== APLICACIÓN PRINCIPAL ====================
+        
+        function initMap() {
+            // Crear el mapa centrado en una ubicación por defecto
+            map = L.map('map').setView([19.4326, -99.1332], 10);
+            
+            // Agregar capa de OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+        }
+        
+        function requestLocationPermission() {
+            const statusElement = document.getElementById('locationPermissionStatus');
+            
+            if (!navigator.geolocation) {
+                statusElement.innerHTML = '<div class="error"><i class="fas fa-exclamation-circle"></i> Tu navegador no soporta geolocalización</div>';
+                return;
+            }
+            
+            // Solicitar ubicación una vez para inicializar
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    statusElement.innerHTML = '<div class="success"><i class="fas fa-check-circle"></i> Permiso de ubicación concedido. Obteniendo datos...</div>';
+                    updateUserLocation(position);
+                    setTimeout(() => {
+                        statusElement.style.display = 'none';
+                    }, 3000);
+                },
+                function(error) {
+                    let errorMessage = "No se pudo obtener tu ubicación. ";
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += "Permiso denegado por el usuario.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += "La información de ubicación no está disponible.";
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += "La solicitud de ubicación ha expirado.";
+                            break;
+                        default:
+                            errorMessage += "Error desconocido.";
+                    }
+                    statusElement.innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i> ${errorMessage}</div>`;
+                    
+                    // Usar ubicación por defecto
+                    const defaultPosition = {
+                        coords: {
+                            latitude: 19.4326,
+                            longitude: -99.1332,
+                            accuracy: 50000
+                        }
+                    };
+                    updateUserLocation(defaultPosition);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+        
+        function updateUserLocation(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+            
+            currentLocation = { lat, lng, accuracy };
+            
+            // Actualizar el mapa
+            map.setView([lat, lng], 13);
+            
+            // Eliminar marcador anterior si existe
+            if (userMarker) {
+                map.removeLayer(userMarker);
+            }
+            
+            // Crear un círculo de precisión
+            const accuracyCircle = L.circle([lat, lng], {
+                color: '#1a2980',
+                fillColor: '#1a2980',
+                fillOpacity: 0.1,
+                radius: accuracy
+            }).addTo(map);
+            
+            // Crear marcador de usuario
+            userMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'user-location-marker',
+                    html: '<div style="background-color: #26d0ce; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>',
+                    iconSize: [26, 26],
+                    iconAnchor: [13, 13]
+                })
+            }).addTo(map);
+            
+            // Agregar popup al marcador
+            userMarker.bindPopup("<b>Tu ubicación actual</b><br>Precisión: " + Math.round(accuracy) + " metros").openPopup();
+            
+            // Actualizar coordenadas en la interfaz
+            document.getElementById('lat').textContent = lat.toFixed(6);
+            document.getElementById('lon').textContent = lng.toFixed(6);
+            document.getElementById('accuracyInfo').textContent = `Precisión: ${Math.round(accuracy)} metros`;
+            
+            // Obtener dirección a partir de coordenadas
+            getAddressFromCoordinates(lat, lng);
+            
+            // Obtener datos del clima para esta ubicación
+            getWeatherData(lat, lng);
+        }
+        
+        function getAddressFromCoordinates(lat, lng) {
+            // Usar Nominatim para geocodificación inversa
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    let address = "Ubicación desconocida";
+                    
+                    if (data && data.address) {
+                        const addr = data.address;
+                        if (addr.road && addr.house_number) {
+                            address = `${addr.road} ${addr.house_number}`;
+                            if (addr.city || addr.town || addr.village) {
+                                address += `, ${addr.city || addr.town || addr.village}`;
+                            }
+                        } else if (addr.city || addr.town || addr.village) {
+                            address = addr.city || addr.town || addr.village;
+                        } else if (addr.state) {
+                            address = addr.state;
+                        } else if (addr.country) {
+                            address = addr.country;
+                        }
+                        
+                        if (addr.country) {
+                            address += `, ${addr.country}`;
+                        }
+                    }
+                    
+                    // Actualizar la interfaz
+                    document.querySelector('#userLocationInfo .address').textContent = address;
+                    document.querySelector('#userLocationInfo .coordinates').textContent = 
+                        `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                })
+                .catch(error => {
+                    console.error("Error en geocodificación:", error);
+                    document.querySelector('#userLocationInfo .address').textContent = 
+                        `Ubicación: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+                });
+        }
+        
+        function getWeatherData(lat, lng) {
+            // Simulación de datos climáticos
+            const weatherConditions = [
+                { condition: "Soleado", icon: "01d", tempRange: [20, 35] },
+                { condition: "Parcialmente nublado", icon: "02d", tempRange: [18, 28] },
+                { condition: "Nublado", icon: "03d", tempRange: [15, 25] },
+                { condition: "Lluvia ligera", icon: "10d", tempRange: [10, 20] },
+                { condition: "Lluvia intensa", icon: "09d", tempRange: [8, 18] },
+                { condition: "Tormenta", icon: "11d", tempRange: [12, 22] }
+            ];
+            
+            const conditionIndex = Math.abs(Math.floor(lat + lng)) % weatherConditions.length;
+            const condition = weatherConditions[conditionIndex];
+            
+            const baseTemp = 25 - Math.abs(lat) * 0.5;
+            const tempVariation = condition.tempRange[1] - condition.tempRange[0];
+            const temperature = baseTemp + (Math.sin(lng) * tempVariation * 0.5);
+            
+            const weatherData = {
+                name: `Lat: ${lat.toFixed(2)}°, Lon: ${lng.toFixed(2)}°`,
+                weather: [{ description: condition.condition, icon: condition.icon }],
+                main: {
+                    temp: temperature,
+                    feels_like: temperature - (2 + Math.random() * 3),
+                    humidity: 40 + Math.floor(Math.random() * 50),
+                    pressure: 1000 + Math.floor(Math.random() * 30)
+                },
+                wind: {
+                    speed: 5 + Math.floor(Math.random() * 25)
+                }
+            };
+            
+            updateWeatherUI(weatherData);
+            lastWeatherUpdate = new Date();
+            updateLastUpdateTime();
+        }
+        
+        function updateWeatherUI(data) {
+            document.getElementById('cityName').textContent = data.name;
+            
+            const description = data.weather[0].description;
+            document.getElementById('weatherDescription').textContent = 
+                description.charAt(0).toUpperCase() + description.slice(1);
+            
+            document.getElementById('temperature').textContent = data.main.temp.toFixed(1);
+            document.getElementById('feelsLike').textContent = data.main.feels_like.toFixed(1) + "°C";
+            document.getElementById('humidity').textContent = data.main.humidity + "%";
+            document.getElementById('windSpeed').textContent = data.wind.speed.toFixed(1) + " km/h";
+            document.getElementById('pressure').textContent = data.main.pressure + " hPa";
+            
+            const iconElement = document.getElementById('weatherIcon');
+            const placeholder = document.getElementById('weatherIconPlaceholder');
+            
+            if (data.weather[0].icon) {
+                const iconCode = data.weather[0].icon;
+                const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+                iconElement.src = iconUrl;
+                iconElement.alt = data.weather[0].description;
+                iconElement.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                placeholder.style.display = 'flex';
+                iconElement.style.display = 'none';
+                
+                let iconClass = "fa-sun";
+                const description = data.weather[0].description.toLowerCase();
+                
+                if (description.includes("lluvia")) iconClass = "fa-cloud-rain";
+                else if (description.includes("nublado")) iconClass = "fa-cloud";
+                else if (description.includes("parcialmente")) iconClass = "fa-cloud-sun";
+                else if (description.includes("tormenta")) iconClass = "fa-bolt";
+                
+                placeholder.innerHTML = `<i class="fas ${iconClass} fa-3x" style="color: #1a2980;"></i>`;
+            }
+        }
+        
+        function updateLastUpdateTime() {
+            if (lastWeatherUpdate) {
+                const timeStr = lastWeatherUpdate.toLocaleTimeString('es-MX', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                document.getElementById('lastUpdate').textContent = timeStr;
+            }
+        }
+        
+        function setupEventListeners() {
+            // Botón para obtener ubicación actual
+            document.getElementById('getCurrentLocation').addEventListener('click', function() {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        updateUserLocation(position);
+                    },
+                    function(error) {
+                        alert("No se pudo obtener la ubicación. Error: " + error.message);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            });
+            
+            // Botón para seguir ubicación en tiempo real
+            document.getElementById('trackLocation').addEventListener('click', function() {
+                const button = this;
+                
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                    button.innerHTML = '<i class="fas fa-satellite"></i> Seguir Ubicación';
+                    button.style.backgroundColor = '';
+                } else {
+                    watchId = navigator.geolocation.watchPosition(
+                        function(position) {
+                            updateUserLocation(position);
+                        },
+                        function(error) {
+                            alert("Error en seguimiento de ubicación: " + error.message);
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 10000,
+                            maximumAge: 0
+                        }
+                    );
+                    button.innerHTML = '<i class="fas fa-satellite"></i> Detener Seguimiento';
+                    button.style.backgroundColor = '#26d0ce';
+                }
+            });
+            
+            // Botón para buscar ubicación
+            document.getElementById('searchLocation').addEventListener('click', searchLocation);
+            
+            // Botón para actualizar clima
+            document.getElementById('refreshWeather').addEventListener('click', function() {
+                if (currentLocation) {
+                    getWeatherData(currentLocation.lat, currentLocation.lng);
+                }
+            });
+            
+            // Botones para compartir
+            document.getElementById('shareLocationTwitter').addEventListener('click', shareOnTwitter);
+            document.getElementById('shareLocationFacebook').addEventListener('click', shareOnFacebook);
+            document.getElementById('copyLocation').addEventListener('click', copyLocationInfo);
+            
+            // Permitir búsqueda con Enter
+            document.getElementById('locationInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchLocation();
+                }
+            });
+        }
+        
+        function searchLocation() {
+            const locationInput = document.getElementById('locationInput').value;
+            if (!locationInput.trim()) {
+                alert("Por favor, ingresa una ubicación para buscar.");
+                return;
+            }
+            
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInput)}&limit=1`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const result = data[0];
+                        const lat = parseFloat(result.lat);
+                        const lng = parseFloat(result.lon);
+                        
+                        const position = {
+                            coords: {
+                                latitude: lat,
+                                longitude: lng,
+                                accuracy: 100
+                            }
+                        };
+                        
+                        updateUserLocation(position);
+                    } else {
+                        alert("No se encontró la ubicación: " + locationInput);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error en búsqueda de ubicación:", error);
+                    alert("Error al buscar la ubicación. Por favor, intenta de nuevo.");
+                });
+        }
+        
+        function shareOnTwitter() {
+            if (!currentLocation) return;
+            
+            const temp = document.getElementById('temperature').textContent;
+            const desc = document.getElementById('weatherDescription').textContent;
+            const city = document.getElementById('cityName').textContent;
+            
+            const text = `Estoy en ${city}. Clima actual: ${temp}°C, ${desc}. Ubicación exacta: ${currentLocation.lat.toFixed(4)}°, ${currentLocation.lng.toFixed(4)}°`;
+            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+            
+            window.open(url, '_blank', 'width=600,height=400');
+        }
+        
+        function shareOnFacebook() {
+            if (!currentLocation) return;
+            
+            const temp = document.getElementById('temperature').textContent;
+            const desc = document.getElementById('weatherDescription').textContent;
+            
+            const text = `Mi ubicación actual: ${currentLocation.lat.toFixed(4)}°, ${currentLocation.lng.toFixed(4)}°. Clima: ${temp}°C, ${desc}.`;
+            const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}&quote=${encodeURIComponent(text)}`;
+            
+            window.open(url, '_blank', 'width=600,height=400');
+        }
+        
+        function copyLocationInfo() {
+            if (!currentLocation) return;
+            
+            const temp = document.getElementById('temperature').textContent;
+            const desc = document.getElementById('weatherDescription').textContent;
+            const address = document.querySelector('#userLocationInfo .address').textContent;
+            
+            const text = `📍 Mi ubicación actual:\n${address}\nCoordenadas: ${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}\n\n🌤️ Clima actual:\n${temp}°C, ${desc}\nHumedad: ${document.getElementById('humidity').textContent}\nViento: ${document.getElementById('windSpeed').textContent}`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const shareMessage = document.getElementById('shareMessage');
+                shareMessage.innerHTML = '<div class="success"><i class="fas fa-check"></i> Información copiada al portapapeles</div>';
+                shareMessage.style.display = 'block';
+                
+                setTimeout(() => {
+                    shareMessage.style.display = 'none';
+                }, 3000);
+            }).catch(err => {
+                console.error('Error al copiar: ', err);
+                alert("No se pudo copiar la información. Por favor, intenta manualmente.");
+            });
+        }
+        
+        // Actualizar el tiempo de última actualización cada minuto
+        setInterval(updateLastUpdateTime, 60000);
+    </script>
+</body>
+</html>
